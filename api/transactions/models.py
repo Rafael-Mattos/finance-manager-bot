@@ -12,8 +12,8 @@ class Group(models.Model):
     type = models.CharField(max_length=1, choices=TYPE_CHOICES, 
                             verbose_name='Tipo da Transação')
     
-    created_at = models.TimeField(auto_now_add=True, verbose_name='Criado em')
-    updated_at = models.TimeField(auto_now=True, verbose_name='Atualizado em')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
 
     class Meta:
         ordering = ['name']
@@ -26,8 +26,8 @@ class Group(models.Model):
 class Description(models.Model):
     group = models.ForeignKey(Group, on_delete=models.PROTECT, verbose_name='Grupo')
     name = models.CharField(max_length=50, verbose_name='Descrição')
-    created_at = models.TimeField(auto_now_add=True, verbose_name='Criado em')
-    updated_at = models.TimeField(auto_now=True, verbose_name='Atualizado em')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
 
     class Meta:
         ordering = ['group', 'name']
@@ -37,7 +37,7 @@ class Description(models.Model):
         return self.name
 
 
-class Transactions(models.Model):
+class Transaction(models.Model):
     group = models.ForeignKey(Group, on_delete=models.PROTECT, verbose_name='Grupo')
     description = models.ForeignKey(Description, on_delete=models.PROTECT, 
                                     verbose_name='Descrição')
@@ -45,8 +45,8 @@ class Transactions(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     obs = models.CharField(max_length=100, null=True, blank=True, 
                            verbose_name='Observação')
-    created_at = models.TimeField(auto_now_add=True, verbose_name='Criado em')
-    updated_at = models.TimeField(auto_now=True, verbose_name='Atualizado em')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
 
     class Meta:
         ordering = ['created_at']
@@ -62,12 +62,12 @@ class Recurring(models.Model):
                                     verbose_name='Descrição')
     user = models.ForeignKey(User, on_delete=models.PROTECT, verbose_name='Usuário')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    begin = models.TimeField(verbose_name='Início')
-    end = models.TimeField(verbose_name='Final')
+    begin = models.DateTimeField(verbose_name='Início')
+    end = models.DateTimeField(verbose_name='Final')
     obs = models.CharField(max_length=100, null=True, blank=True, 
                            verbose_name='Observação')
-    created_at = models.TimeField(auto_now_add=True, verbose_name='Criado em')
-    updated_at = models.TimeField(auto_now=True, verbose_name='Atualizado em')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
 
     class Meta:
         ordering = ['begin']
