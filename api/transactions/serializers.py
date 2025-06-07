@@ -1,9 +1,9 @@
 from rest_framework import serializers
 from transactions.models import *
 
-class GroupModelSerializer(serializers.ModelSerializer):
+class CategoryModelSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Group
+        model = Category
         fields = '__all__'
 
 
@@ -14,6 +14,9 @@ class DescriptionModelSerializer(serializers.ModelSerializer):
 
 
 class TransactionModelSerializer(serializers.ModelSerializer):
+    category = serializers.PrimaryKeyRelatedField(read_only=True)
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    
     class Meta:
         model = Transaction
         fields = '__all__'

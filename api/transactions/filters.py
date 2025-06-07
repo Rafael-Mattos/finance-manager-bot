@@ -1,17 +1,17 @@
 from dj_rql.filter_cls import AutoRQLFilterClass, FilterLookups
-from transactions.models import Group, Description, Transaction, Recurring
+from transactions.models import Category, Description, Transaction, Recurring
 
 
-class GroupFilterClass(AutoRQLFilterClass):
-    MODEL = Group
+class CategoryFilterClass(AutoRQLFilterClass):
+    MODEL = Category
 
     
 class DescriptionFilterClass(AutoRQLFilterClass):
     MODEL = Description
     FILTERS = [
         {
-            'filter':  'group',
-            'source': 'group__name'
+            'filter':  'category',
+            'source': 'category__name'
         }
     ]
 
@@ -19,8 +19,8 @@ class TransactionFilterClass(AutoRQLFilterClass):
     MODEL = Transaction
     FILTERS = [
         {
-            'filter':  'group',
-            'source': 'group__name'
+            'filter':  'category',
+            'source': 'category__name'
         },
         {
             'filter':  'description',
@@ -37,8 +37,8 @@ class RecurringFilterClass(AutoRQLFilterClass):
     MODEL = Recurring
     FILTERS = [
         {
-            'filter':  'group',
-            'source': 'group__name'
+            'filter':  'category',
+            'source': 'category__name'
         },
         {
             'filter':  'description',
