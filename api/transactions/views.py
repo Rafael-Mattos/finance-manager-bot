@@ -1,13 +1,25 @@
 from dj_rql.drf import RQLFilterBackend
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
-from transactions.filters import (CategoryFilterClass, 
-                                  DescriptionFilterClass, 
-                                  TransactionFilterClass, 
-                                  RecurringFilterClass
-                                  )
-from transactions.models import *
-from transactions.serializers import *
+from transactions.filters import (
+    CategoryFilterClass,
+    DescriptionFilterClass,
+    TransactionFilterClass,
+    RecurringFilterClass
+)
+from transactions.models import (
+    Category,
+    Description,
+    Transaction,
+    Recurring
+)
+from transactions.serializers import (
+    CategoryModelSerializer,
+    DescriptionModelSerializer,
+    TransactionModelSerializer,
+    RecurringModelSerializer
+)
+
 
 class CategoryModelViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -39,7 +51,7 @@ class TransactionModelViewSet(viewsets.ModelViewSet):
         category = description.category
         serializer.save(user=self.request.user, category=category)
         print(serializer)
-    
+
     def perform_update(self, serializer):
         description = serializer.validated_data.get('description')
 
@@ -55,6 +67,3 @@ class RecurringModelViewSet(viewsets.ModelViewSet):
     serializer_class = RecurringModelSerializer
     filter_backends = [RQLFilterBackend]
     rql_filter_class = RecurringFilterClass
-
-
-
