@@ -4,20 +4,19 @@ from rest_framework.exceptions import ValidationError
 from transactions.filters import (
     CategoryFilterClass,
     DescriptionFilterClass,
-    TransactionFilterClass,
-    RecurringFilterClass
+    TransactionFilterClass
 )
 from transactions.models import (
     Category,
     Description,
-    Transaction,
-    Recurring
+    Transaction
 )
 from transactions.serializers import (
     CategoryModelSerializer,
     DescriptionModelSerializer,
+    DescriptionListModelSerializer,
     TransactionModelSerializer,
-    RecurringModelSerializer
+    TransactionListModelSerializer
 )
 
 
@@ -34,6 +33,12 @@ class DescriptionModelViewSet(viewsets.ModelViewSet):
     filter_backends = [RQLFilterBackend]
     rql_filter_class = DescriptionFilterClass
     # permission_classes = [permissions.DjangoModelPermissions]
+
+    def get_serializer_class(self):
+        if self.action in ('list', 'retrieve'):
+            return DescriptionListModelSerializer
+
+        return DescriptionModelSerializer
 
 
 class TransactionModelViewSet(viewsets.ModelViewSet):
@@ -61,9 +66,8 @@ class TransactionModelViewSet(viewsets.ModelViewSet):
         else:
             serializer.save()
 
+    def get_serializer_class(self):
+        if self.action in ('list', 'retrieve'):
+            return TransactionListModelSerializer
 
-class RecurringModelViewSet(viewsets.ModelViewSet):
-    queryset = Recurring.objects.all()
-    serializer_class = RecurringModelSerializer
-    filter_backends = [RQLFilterBackend]
-    rql_filter_class = RecurringFilterClass
+        return TransactionModelSerializer

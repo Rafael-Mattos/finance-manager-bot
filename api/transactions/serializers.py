@@ -2,8 +2,7 @@ from rest_framework import serializers
 from transactions.models import (
     Category,
     Description,
-    Transaction,
-    Recurring
+    Transaction
 )
 
 
@@ -13,14 +12,23 @@ class CategoryModelSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DescriptionListModelSerializer(serializers.ModelSerializer):
+    category = CategoryModelSerializer(read_only=True)
+    
+    class Meta:
+        model = Description
+        fields = '__all__'
+
+
 class DescriptionModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Description
         fields = '__all__'
 
 
-class TransactionModelSerializer(serializers.ModelSerializer):
-    category = serializers.PrimaryKeyRelatedField(read_only=True)
+class TransactionListModelSerializer(serializers.ModelSerializer):
+    category = CategoryModelSerializer(read_only=True)
+    description = DescriptionModelSerializer(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -28,7 +36,9 @@ class TransactionModelSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class RecurringModelSerializer(serializers.ModelSerializer):
+class TransactionModelSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
-        model = Recurring
+        model = Transaction
         fields = '__all__'
