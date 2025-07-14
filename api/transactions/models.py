@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class Category(models.Model):
@@ -42,11 +43,12 @@ class Transaction(models.Model):
     user = models.ForeignKey(User, on_delete=models.PROTECT, verbose_name='Usuário')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     obs = models.CharField(max_length=100, null=True, blank=True, verbose_name='Observação')
+    date = models.DateTimeField(default=timezone.now, verbose_name='Data')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
 
     class Meta:
-        ordering = ['created_at']
+        ordering = ['date']
         verbose_name = 'Lançamento'
 
     def __str__(self):

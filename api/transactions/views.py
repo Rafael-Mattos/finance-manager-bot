@@ -1,6 +1,11 @@
+from datetime import datetime
+
+from dateutil.relativedelta import relativedelta
 from dj_rql.drf import RQLFilterBackend
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 from transactions.filters import (
     CategoryFilterClass,
     DescriptionFilterClass,
@@ -71,3 +76,39 @@ class TransactionModelViewSet(viewsets.ModelViewSet):
             return TransactionListModelSerializer
 
         return TransactionModelSerializer
+    
+    @action(detail=False, methods=['post'], url_path='recurring')
+    def create_recurring(self, request):
+        data = request.data.copy()
+        repeat = int(data.pop('repeat', 1))
+        initial_date = data.get('date')
+
+        if not initial_date:
+            return Response({'date': 'Campo obrigatório.'}, status=400)
+
+        try:
+            date_obj = datetime.strptime(initial_date, "%Y-%m-%d").date()
+        except ValueError:
+            return Response(
+                {
+                    'date': 'Formato de data inválido. Use YYYY-MM-DD.'
+                }, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created = []
+
+        for i in range(repeat):
+            instance_data = data.copy()
+            instance_data['date'] = (date_obj + relativedelta(months=+i)).isoformat()
+
+            serializer = self.get_serializer(data=instance_data)
+            serializer.is_valid(raise_exception=True)
+
+            description = serializer.validated_data.get('description')
+            category = description.category
+            serializer.save(user=request.user, category=category)
+
+            created.append(serializer.data)
+
+        return Response(created, status=status.HTTP_201_CREATED)
