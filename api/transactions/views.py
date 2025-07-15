@@ -2,6 +2,7 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 from dj_rql.drf import RQLFilterBackend
+from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -112,3 +113,41 @@ class TransactionModelViewSet(viewsets.ModelViewSet):
             created.append(serializer.data)
 
         return Response(created, status=status.HTTP_201_CREATED)
+    
+
+    @action(detail=False, methods=['delete'], url_path='delete-from-date')
+    def delete_from_date(self, request):
+        from_date_str = request.data.get("from_date")
+        original_id = request.data.get("original_id")
+
+        if not from_date_str or not original_id:
+            raise ValidationError({
+                "from_date": "Campo obrigatório.",
+                "original_id": "Campo obrigatório."
+            })
+
+        from_date = parse_date(from_date_str)
+        if not from_date:
+            raise ValidationError({"from_date": "Data inválida. Use o formato YYYY-MM-DD."})
+
+        try:
+            original = Transaction.objects.get(id=original_id, user=request.user)
+        except Transaction.DoesNotExist:
+            return Response(
+                {"error": "Transação original não encontrada."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        to_delete = Transaction.objects.filter(
+            user=request.user,
+            description=original.description,
+            amount=original.amount,
+            date__gte=from_date
+        )
+
+        count, _ = to_delete.delete()
+
+        return Response(
+            {"message": f"{count} transações deletadas."},
+            status=status.HTTP_200_OK
+        )
