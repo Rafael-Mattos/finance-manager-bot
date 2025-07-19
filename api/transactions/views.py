@@ -2,6 +2,8 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 from dj_rql.drf import RQLFilterBackend
+from django.db.models import Count, F, Value
+from django.db.models.functions import Concat
 from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -77,6 +79,26 @@ class TransactionModelViewSet(viewsets.ModelViewSet):
             return TransactionListModelSerializer
 
         return TransactionModelSerializer
+    
+
+    @action(detail=False, methods=['get'], url_path='top-descriptions')
+    def top_descriptions(self, request):
+        user = request.user
+
+        result = (
+            Transaction.objects.filter(user=user)
+            .values(
+                'category__id',
+                'category__name',
+                'description__id',
+                'description__name',
+            )
+            .annotate(total=Count('id'))
+            .order_by('-total')[:10]
+        )
+
+        return Response(result)
+    
     
     @action(detail=False, methods=['post'], url_path='recurring')
     def create_recurring(self, request):
