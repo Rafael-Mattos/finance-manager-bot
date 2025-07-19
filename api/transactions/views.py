@@ -103,38 +103,45 @@ class TransactionModelViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='recurring')
     def create_recurring(self, request):
         data = request.data.copy()
-        repeat = int(data.pop('repeat', 1))
+        repeat = int(data.pop('repeat', 0))
         initial_date = data.get('date')
 
         if not initial_date:
             return Response({'date': 'Campo obrigatório.'}, status=400)
 
+        if repeat == 0:
+            repeat = 1200
+
         try:
             date_obj = datetime.strptime(initial_date, "%Y-%m-%d").date()
         except ValueError:
             return Response(
-                {
-                    'date': 'Formato de data inválido. Use YYYY-MM-DD.'
-                }, 
+                {'date': 'Formato de data inválido. Use YYYY-MM-DD.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        created = []
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
 
+        validated_data = serializer.validated_data
+        # description = validated_data.get('description')
+        # category = description.category
+
+        instances = []
         for i in range(repeat):
-            instance_data = data.copy()
-            instance_data['date'] = (date_obj + relativedelta(months=+i)).isoformat()
+            instance_date = date_obj + relativedelta(months=i)
+            instance = Transaction(
+                user=request.user,
+                description=validated_data.get('description'),
+                amount=validated_data.get('amount'),
+                category=validated_data.get('category'),
+                date=instance_date,
+            )
+            instances.append(instance)
 
-            serializer = self.get_serializer(data=instance_data)
-            serializer.is_valid(raise_exception=True)
+        Transaction.objects.bulk_create(instances)
 
-            description = serializer.validated_data.get('description')
-            category = description.category
-            serializer.save(user=request.user, category=category)
-
-            created.append(serializer.data)
-
-        return Response(created, status=status.HTTP_201_CREATED)
+        return Response({'detail': f'{repeat} lançamentos criados.'}, status=status.HTTP_201_CREATED)
     
 
     @action(detail=False, methods=['delete'], url_path='delete-from-date')

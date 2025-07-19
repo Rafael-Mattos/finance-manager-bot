@@ -67,6 +67,9 @@ class ApiRequests:
 
         response = requests.post(url, headers=self.get_headers(), json=info)
         return response.json()
+    
+
+    def insert_recurring_transaction(self, category, description, amount, date=None, obs=None)
 
 
 if __name__ == '__main__':
