@@ -69,9 +69,53 @@ class ApiRequests:
         return response.json()
     
 
-    def insert_recurring_transaction(self, category, description, amount, date=None, obs=None)
+    def get_transaction(self, id):
+        url = f'{self.DOMAIN}/api/v1/transactions/{id}/'
+        response = requests.get(url, headers=self.get_headers())
+        return response.json()
+    
+
+    def delete_transaction(self, id):
+        url = f'{self.DOMAIN}/api/v1/transactions/{id}/'
+
+        response = requests.delete(url, headers=self.get_headers())
+        if response.status_code == 204:
+            return {"detail": "Lançamento deletado com sucesso."}
+        return {"error": "Nenhum lançamento encontrado"}
+    
+
+    def insert_recurring_transaction(self, category, description, amount, date=None, obs=None, repeat=None):
+        url = f'{self.DOMAIN}/api/v1/transactions/recurring/'
+        info = {
+            'category': category,
+            'description': description,
+            'amount': amount,
+        }
+
+        if repeat:
+            info['repeat'] = repeat
+        if date:
+            info['date'] = date
+        if obs:
+            info['obs'] = obs
+
+        response = requests.post(url, headers=self.get_headers(), json=info)
+        return response.json()
+    
+
+    def delete_recurring_transactions(self, reference_id, from_date):
+        url = f'{self.DOMAIN}/api/v1/transactions/delete-from-date/'
+        info = {
+            "original_id": reference_id,
+            "from_date": from_date
+        }
+        response = requests.delete(url, headers=self.get_headers(), json=info)
+        return response.json()
 
 
 if __name__ == '__main__':
     teste = ApiRequests()
-    print(teste.insert_transaction(4, 3, 150.57, '2025-07-18', 'Uma observação qualquer'))
+    # print(teste.insert_transaction(3, 2, 200.57))
+    print(teste.delete_transaction(4948))
+    # print(teste.insert_recurring_transaction(1, 1, 70000, '2025-09-23', repeat=4))
+    # print(teste.delete_recurring_transactions(4900, '2025-08-01'))

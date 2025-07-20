@@ -124,8 +124,6 @@ class TransactionModelViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         validated_data = serializer.validated_data
-        # description = validated_data.get('description')
-        # category = description.category
 
         instances = []
         for i in range(repeat):
@@ -135,6 +133,7 @@ class TransactionModelViewSet(viewsets.ModelViewSet):
                 description=validated_data.get('description'),
                 amount=validated_data.get('amount'),
                 category=validated_data.get('category'),
+                obs=validated_data.get('obs'),
                 date=instance_date,
             )
             instances.append(instance)
