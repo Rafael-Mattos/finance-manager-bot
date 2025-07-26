@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 
 from dotenv import load_dotenv
@@ -198,8 +199,12 @@ class ApiRequests:
 
         if repeat:
             info['repeat'] = repeat
+
         if date:
             info['date'] = date
+        else:
+            info['date'] = datetime.now().date().isoformat()
+
         if obs:
             info['obs'] = obs
 
@@ -215,3 +220,7 @@ class ApiRequests:
         }
         response = requests.delete(url, headers=self.get_headers(), json=info)
         return response.json()
+
+if __name__ == '__main__':
+    teste = ApiRequests()
+    print(teste.get_top_descriptions())
