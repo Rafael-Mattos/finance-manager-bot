@@ -16,6 +16,7 @@ ALLOWED_USERS = list(map(int, os.getenv("ALLOWED_USERS", "").split(",")))
 TELEGRAM_TOKEN = os.getenv("TELEGRAMTOKEN")
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 data_transactions = {}
+menu_messages = {}
 ar = ApiRequests()
 
 
@@ -34,35 +35,33 @@ def show_top_ten_descriptions(msg):
         'callback_data': 'category-description:other'
     })
     
-    stacked_inline_buttons(msg.chat.id, btn, 'Selecione a descrição da transação')
+    stacked_inline_buttons(msg.from_user.id, msg.chat.id, btn, 'Selecione a descrição da transação')
 
 
 def show_menu(msg):
-    # bot.send_message(msg.chat.id, "Opções para categoria:")
     btn = [
         {'label': '➕ Criar', 'callback_data': 'new_category'},
         {'label': '✏️ Editar', 'callback_data': 'edit_category'},
         {'label': '🗑️ Excluir', 'callback_data': 'delete_category'},
     ]
-    inline_buttons(msg.chat.id, btn, 'Opções para categoria:')
+    inline_buttons(msg.from_user.id, msg.chat.id, btn, 'Opções para categoria:')
 
     btn = [
         {'label': '➕ Criar', 'callback_data': 'new_description'},
         {'label': '✏️ Editar', 'callback_data': 'edit_description'},
         {'label': '🗑️ Excluir', 'callback_data': 'delete_description'},
     ]
-    inline_buttons(msg.chat.id, btn, 'Opções para descrição:')
+    inline_buttons(msg.from_user.id, msg.chat.id, btn, 'Opções para descrição:')
 
     btn = [
         {'label': '✏️ Editar', 'callback_data': 'edit_transaction'},
         {'label': '🗑️ Excluir', 'callback_data': 'delete_transaction'},
         {'label': '🚫 Excluir parcelas', 'callback_data': 'delete_recurring'},
     ]
-    stacked_inline_buttons(msg.chat.id, btn, 'Opções para Transações')
+    stacked_inline_buttons(msg.from_user.id, msg.chat.id, btn, 'Opções para Transações')
 
 
-
-def show_transaction_menu(chat_id):
+def show_transaction_menu(user_id, chat_id):
     btn = [
         {'label': '➕ Adicionar observação', 'callback_data': 'add_obs'},
         {'label': '📅 Escolher data', 'callback_data': 'add_data'},
@@ -70,10 +69,10 @@ def show_transaction_menu(chat_id):
         {'label': '❌ Descartar transação', 'callback_data': 'exit_transaction'},
         {'label': '✅ Gravar', 'callback_data': 'save_transaction'}
     ]
-    stacked_inline_buttons(chat_id, btn, 'Adicione informações ou salve o lançamento.')
+    stacked_inline_buttons(user_id, chat_id, btn, 'Adicione informações ou salve o lançamento.')
 
 
-def show_all_descriptions(chat_id):
+def show_all_descriptions(user_id, chat_id):
     descriptions = ar.get_all_descriptions()
     btn = []
 
@@ -83,13 +82,13 @@ def show_all_descriptions(chat_id):
             'callback_data': f"category-description:{description['category']['id']}-{description['id']}"
         })
 
-    stacked_inline_buttons(chat_id, btn, 'Selecione a descrição desejada.')
+    stacked_inline_buttons(user_id, chat_id, btn, 'Selecione a descrição desejada.')
 
 
 def save_obs(msg):
     data_transactions[msg.from_user.id]["obs"] = msg.text
     bot.reply_to(msg, "Observação adicionada à transação")
-    show_transaction_menu(msg.chat.id)
+    show_transaction_menu(msg.from_user.id, msg.chat.id)
 
 
 def save_date(msg):
@@ -99,7 +98,7 @@ def save_date(msg):
         bot.reply_to(msg, "Data editada")
     except:
         bot.reply_to(msg, "Data não adicionada. Por favor, adicione uma data como no exemplo: 15/05/2025")
-    show_transaction_menu(msg.chat.id)
+    show_transaction_menu(msg.from_user.id, msg.chat.id)
 
 
 def save_recurring(msg):
@@ -109,7 +108,7 @@ def save_recurring(msg):
         bot.reply_to(msg, f'Transação será repetida por {msg.text} vezes')
     except:
         bot.reply_to(msg, 'Não foi possível adicionar um número de parcelas, digite um número inteiro.')
-    show_transaction_menu(msg.chat.id)
+    show_transaction_menu(msg.from_user.id, msg.chat.id)
 
 
 def save_category(msg):
@@ -118,10 +117,10 @@ def save_category(msg):
         {'label': '➕ Receita', 'callback_data': f'new_category:{category_name}:r'},
         {'label': '➖ Despesa', 'callback_data': f'new_category:{category_name}:e'},
     ]
-    inline_buttons(msg.chat.id, btn, 'Selecione o tipo de categoria a ser criada:')
+    inline_buttons(msg.from_user.id, msg.chat.id, btn, 'Selecione o tipo de categoria a ser criada:')
 
 
-def select_category(chat_id, mode):
+def select_category(user_id, chat_id, mode):
     categories = ar.get_all_categories()
     btn = []
 
@@ -135,7 +134,7 @@ def select_category(chat_id, mode):
         'callback_data': f'{mode}:cancel:0:cancel'
     })
     
-    stacked_inline_buttons(chat_id, btn, 'Selecione a categoria desejada:')
+    stacked_inline_buttons(user_id, chat_id, btn, 'Selecione a categoria desejada:')
 
 
 def validate_users(func):
@@ -157,7 +156,7 @@ def validate_users(func):
     return wrapper
 
 
-def inline_buttons(chat_id, buttons, text):
+def inline_buttons(user_id, chat_id, buttons, text):
     markup = InlineKeyboardMarkup()
     options = []
     for button in buttons:
@@ -167,10 +166,19 @@ def inline_buttons(chat_id, buttons, text):
                 callback_data=button['callback_data']
             ))
     markup.row(*options)
-    bot.send_message(chat_id, text, reply_markup=markup)
+    
+    sent_msg = bot.send_message(chat_id, text, reply_markup=markup)
+    print(sent_msg.message_id)
+    try:
+        menu_messages[user_id].append(sent_msg.message_id)
+        print('Adicionou')
+    except Exception as e:
+        print('erro')
+        print(str(e))
+    print(menu_messages)
 
 
-def stacked_inline_buttons(chat_id, buttons, text):
+def stacked_inline_buttons(user_id, chat_id, buttons, text):
     markup = InlineKeyboardMarkup()
 
     for button in buttons:
@@ -180,12 +188,32 @@ def stacked_inline_buttons(chat_id, buttons, text):
                 callback_data=button['callback_data']
             ))
         
-    bot.send_message(chat_id, text, reply_markup=markup)
+    sent_msg = bot.send_message(chat_id, text, reply_markup=markup)
+
+    try:
+        menu_messages[user_id].append(sent_msg.message_id)
+        print('Adicionou')
+    except Exception as e:
+        print(str(e))
+    print(menu_messages)
+
+
+def delete_all_menus(user_id, chat_id):
+    if user_id in menu_messages:
+        for msg_id in menu_messages[user_id]:
+            try:
+                # bot.edit_message_reply_markup(chat_id=chat_id, message_id=msg_id, reply_markup=None)
+                bot.delete_message(chat_id, msg_id)
+            except Exception as e:
+                print(f"Erro encontrado: {e}")
+        menu_messages[user_id] = []
 
 
 @bot.message_handler(func=lambda msg: True)
 @validate_users
 def first_message(msg):
+    menu_messages[msg.from_user.id] = []
+
     try:
         amount = msg.text.replace(',','.')
         _ = Decimal(amount)
@@ -205,18 +233,20 @@ def first_message(msg):
 @bot.callback_query_handler(func=lambda call: True)
 @validate_users
 def callback_handler(call):
+    delete_all_menus(call.from_user.id, call.message.chat.id)
+
     if call.data.startswith('category-description:'):
         # bot.answer_callback_query(call.id, "Pagamento confirmado!")
         # bot.send_message(call.message.chat.id, "Obrigado!")
         _, ids = call.data.split(':')
         if ids == 'other':
-            show_all_descriptions(call.message.chat.id)
+            show_all_descriptions(call.from_user.id, call.message.chat.id)
         else:
             category_id, description_id = ids.split('-')
             data_transactions[call.from_user.id]['category'] = category_id
             data_transactions[call.from_user.id]['description'] = description_id
 
-            show_transaction_menu(call.message.chat.id)
+            show_transaction_menu(call.from_user.id, call.message.chat.id)
             
     elif call.data == 'add_obs':
         msg = bot.send_message(call.message.chat.id, "Digite a observação:")
@@ -276,7 +306,7 @@ def callback_handler(call):
     elif call.data.startswith('edit_category'):
         info = call.data.split(':')
         if len(info) <= 1:
-            select_category(call.message.chat.id, 'edit_category')
+            select_category(call.from_user.id, call.message.chat.id, 'edit_category')
         else:
             try:
                 old_category_name = info[1]
@@ -305,12 +335,11 @@ def callback_handler(call):
                     f'Ops... Erro encontrado, por favor repita o processo.'
                 )
 
-
     elif call.data.startswith('delete_category'):
         info = call.data.split(':')
 
         if len(info) <= 1:
-            select_category(call.message.chat.id, 'delete_category')
+            select_category(call.from_user.id, call.message.chat.id, 'delete_category')
         else:
             category_name = info[1]
             category_id = info[2]
