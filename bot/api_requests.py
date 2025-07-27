@@ -83,13 +83,7 @@ class ApiRequests:
 
         response = requests.delete(url, headers=self.get_headers())
 
-        if response.status_code == 204:
-            return {"detail": "Categoria deletada com sucesso."}
-        elif response.status_code == 500:
-            return {
-                "detail": "Exclusão não é permitida. Verifique se existem descrições atreladas a esta categoria."
-            }
-        return {"error": "Nenhuma categoria encontrada."}
+        return response
 
 
     def get_top_descriptions(self):
