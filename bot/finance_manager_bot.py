@@ -1,4 +1,3 @@
-
 from decimal import Decimal
 from datetime import datetime
 import os
@@ -137,20 +136,66 @@ def select_category(user_id, chat_id, mode):
     stacked_inline_buttons(user_id, chat_id, btn, 'Selecione a categoria desejada:')
 
 
+def save_description(msg):
+    description_name = msg.text
+    expense_btn= []
+    revenue_btn = []
+    
+    categories = ar.get_all_categories()
+
+    for category in categories:
+        if category['type'] == 'r':
+            revenue_btn.append({
+                'label': category['name'], 
+                'callback_data': f'new_description:{category['name']}:{category['id']}:{description_name}'
+            })
+        else:
+            expense_btn.append({
+                'label': category['name'], 
+                'callback_data': f'new_description:{category['name']}:{category['id']}:{description_name}'
+            })
+    if len(revenue_btn) > 0:
+        stacked_inline_buttons(msg.from_user.id, msg.chat.id, revenue_btn, 'Categorias de receita:')
+    if len(expense_btn) > 0:
+        stacked_inline_buttons(msg.from_user.id, msg.chat.id, expense_btn, 'Categorias de despesa:')
+    
+    btn = [{
+        'label': '🚫 Cancelar', 
+        'callback_data': f'new_description:cancel:0:cancel'
+    }]
+    stacked_inline_buttons(msg.from_user.id, msg.chat.id, btn, 'Cancelar cadastro:')
+
+
+def select_description(mode, user_id, chat_id):
+    btn = []
+    descriptions = ar.get_all_descriptions()
+    descriptions = sorted(descriptions, key=lambda x: x['category']['type'])
+    
+    for description in descriptions:
+        btn.append({
+            'label': f'{description['name']} ({description['category']['name']})', 
+            'callback_data': f'{mode}:{description['id']}:{description['name']}'
+        })
+    
+    btn.append({
+        'label': '🚫 Cancelar', 
+        'callback_data': f'{mode}:0:cancel'
+    })
+
+    stacked_inline_buttons(user_id, chat_id, btn, 'Selecione a descrição:')
+        
+
+
 def validate_users(func):
     @wraps(func)
     def wrapper(obj):
-        user_id = getattr(obj, 'from_user', None)
-
-        if not user_id and hasattr(obj, 'message'):
-            user_id = getattr(obj.from_user, 'id', None)
-        else:
-            user_id = getattr(obj.from_user, 'id', None)
+        user_id = getattr(obj.from_user, 'id', None)
+        user_name = getattr(obj.from_user, 'username', None)
 
         if user_id in ALLOWED_USERS:
             return func(obj)
         else:
-            print(f"Usuário não autorizado: {user_id}")
+            print(f"Usuário não autorizado - id:{user_id} - username:{user_name}")
             return
 
     return wrapper
@@ -168,14 +213,12 @@ def inline_buttons(user_id, chat_id, buttons, text):
     markup.row(*options)
     
     sent_msg = bot.send_message(chat_id, text, reply_markup=markup)
-    print(sent_msg.message_id)
+
     try:
         menu_messages[user_id].append(sent_msg.message_id)
-        print('Adicionou')
     except Exception as e:
-        print('erro')
         print(str(e))
-    print(menu_messages)
+
 
 
 def stacked_inline_buttons(user_id, chat_id, buttons, text):
@@ -192,10 +235,8 @@ def stacked_inline_buttons(user_id, chat_id, buttons, text):
 
     try:
         menu_messages[user_id].append(sent_msg.message_id)
-        print('Adicionou')
     except Exception as e:
         print(str(e))
-    print(menu_messages)
 
 
 def delete_all_menus(user_id, chat_id):
@@ -212,6 +253,8 @@ def delete_all_menus(user_id, chat_id):
 @bot.message_handler(func=lambda msg: True)
 @validate_users
 def first_message(msg):
+    global data_transactions
+    global menu_messages
     menu_messages[msg.from_user.id] = []
 
     try:
@@ -262,34 +305,55 @@ def callback_handler(call):
         bot.register_next_step_handler(msg, save_recurring)
     elif call.data == 'exit_transaction':
         bot.answer_callback_query(call.id, "❌ A transação foi descartada.")
+        bot.send_message(
+            call.message.chat.id, 
+            "❌ A transação foi descartada."
+        )
         data_transactions.pop(call.from_user.id, None)
     elif call.data == 'save_transaction':
         bot.answer_callback_query(call.id, "✅ Transação cadastrada com sucesso!")
 
         obs = data_transactions[call.from_user.id]['obs'] if 'obs' in data_transactions[call.from_user.id] else None
         date = data_transactions[call.from_user.id]['date'] if 'date' in data_transactions[call.from_user.id] else None
-        
-        if 'repeat' in data_transactions[call.from_user.id]:
-            response = ar.insert_recurring_transaction(
-                data_transactions[call.from_user.id]['category'],
-                data_transactions[call.from_user.id]['description'],
-                data_transactions[call.from_user.id]['amount'],
-                date,
-                obs,
-                data_transactions[call.from_user.id]['repeat']
-            )
-            
-        else:
-            response = ar.insert_transaction(
-                data_transactions[call.from_user.id]['category'],
-                data_transactions[call.from_user.id]['description'],
-                data_transactions[call.from_user.id]['amount'],
-                date,
-                obs
-            )
+        try:
+            if 'repeat' in data_transactions[call.from_user.id]:
+                response = ar.insert_recurring_transaction(
+                    data_transactions[call.from_user.id]['category'],
+                    data_transactions[call.from_user.id]['description'],
+                    data_transactions[call.from_user.id]['amount'],
+                    date,
+                    obs,
+                    data_transactions[call.from_user.id]['repeat']
+                )
+                
+            else:
+                response = ar.insert_transaction(
+                    data_transactions[call.from_user.id]['category'],
+                    data_transactions[call.from_user.id]['description'],
+                    data_transactions[call.from_user.id]['amount'],
+                    date,
+                    obs
+                )
 
-        print(response)
-        data_transactions.pop(call.from_user.id, None)
+            data_transactions.pop(call.from_user.id, None)
+            if 'id' in response:
+                bot.send_message(
+                    call.message.chat.id, 
+                    "✅ Lançamento adicionado com sucesso."
+                )
+            else:
+                bot.send_message(
+                    call.message.chat.id, 
+                    "Algo deu errado, revise seu lençamento e tente novamente."
+                )
+                print('Erro ao tentar cadastrar transação. Veja retorno abaixo.')
+                print(response)
+        except Exception as e:
+            print('Ocorreu um erro:', str(e))
+            bot.send_message(
+                call.message.chat.id, 
+                "Erro ao tentar enviar lançamento. Por favor, tente novamente."
+            )
     
     elif call.data.startswith('new_category'):
         info = call.data.split(':')
@@ -364,17 +428,119 @@ def callback_handler(call):
                 )
 
     elif call.data.startswith('new_description'):
-        ...
+        info = call.data.split(':')
+
+        if len(info) <= 1:
+            bot.send_message(call.message.chat.id, 'Lembre-se que deve haver uma categoria existente para ser atrelada à descrição')
+            msg = bot.send_message(call.message.chat.id, 'Digite o nome da descrição')
+            bot.register_next_step_handler(msg, save_description)
+        else:
+            try:
+                category_name = info[1]
+                category_id = info[2]
+                description_name = info[3]
+
+                if category_name == 'cancel':
+                    bot.send_message(
+                        call.message.chat.id, 
+                        'Nenhuma descrição foi cadastrada.'
+                    )
+                    return
+
+                response = ar.insert_description(category_id, description_name)
+
+                if 'id' in response:
+                    bot.send_message(
+                        call.message.chat.id, 
+                        f'✅ A descrição "{description_name}" foi cadastrada com sucesso dentro da categoria "{category_name}"'
+                    )
+                else:
+                    bot.send_message(
+                        call.message.chat.id, 
+                        'Falha ao tentar cadastrar a nova descrição. Por favor, verifique os dados e tente novamente.'
+                    )
+            except Exception as e:
+                bot.send_message(
+                    call.message.chat.id, 
+                    'Falha ao tentar cadastrar a nova descrição. Por favor, tente novamente.'
+                )
+                print(f'Ocorreu um erro: {e}')
+
     elif call.data.startswith('edit_description'):
-        ...
+        info = call.data.split(':')
+
+        if len(info) <= 1:
+            select_description('edit_description', call.from_user.id, call.message.chat.id)
+        else:
+            try:
+                description_id = info[1]
+                description_name = info[2]
+
+                if int(description_id) == 0:
+                    bot.send_message(
+                        call.message.chat.id, 
+                        'Nenhuma descrição foi editada.'
+                    )
+                    return
+                
+                bot.send_message(call.message.chat.id, f'Você selecionou a descrição "{description_name}" para edição.')
+
+                msg = bot.send_message(call.message.chat.id, 'Digite o novo nome da descrição:')
+                bot.register_next_step_handler(
+                    msg, 
+                    lambda message: (
+                        ar.patch_description(description_id, message.text),
+                        bot.send_message(
+                            call.message.chat.id, 
+                            f'A descrição foi editada para "{message.text}" com sucesso.'
+                        )
+                    )
+                )
+            except Exception as e:
+                print(f'Ocorreu um erro: {e}')
+                bot.send_message(
+                    call.message.chat.id, 
+                    'Falha ao tentar editar a descrição. Por favor, tente novamente.'
+                )
+
     elif call.data.startswith('delete_description'):
-        ...
+        info = call.data.split(':')
+
+        if len(info) <= 1:
+            select_description('delete_description', call.from_user.id, call.message.chat.id)
+        else:
+            try:
+                description_id = info[1]
+                description_name = info[2]
+
+                if int(description_id) == 0:
+                    return_msg = 'Nenhuma descrição foi excluída.'
+                    return
+                
+                response = ar.delete_description(description_id)
+
+                if response.status_code == 204:
+                    return_msg = f'A descrição "{description_name}" foi excluída com sucesso.'
+                elif response.status_code == 500:
+                        return_msg = 'Exclusão não é permitida. Verifique se existem transações atreladas a esta descrição.'
+                else:
+                    return_msg = 'Nenhuma descrição encontrada.'
+
+            except Exception as e:
+                print(f'Erro encontrado: {e}')
+                return_msg = f'Erro ao tentar excluir a descrição "{description_name}". Por favor, tente novamente.'
+            finally:
+                bot.send_message(call.message.chat.id, return_msg)
+
     elif call.data.startswith('edit_transaction'):
-        ...
+        # to do
+        print('Edit transaction')
     elif call.data.startswith('delete_transaction'):
-        ...
+        # to do
+        print('Delete transaction')
     elif call.data.startswith('delete_recurring'):
-        ...
+        # to do
+        print('Delete recurring transaction')
 
     bot.answer_callback_query(call.id)
 

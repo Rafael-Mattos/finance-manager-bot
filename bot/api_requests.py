@@ -110,14 +110,13 @@ class ApiRequests:
         return response.json()
     
 
-    def put_description(self, id, category_id, description):
+    def patch_description(self, id, description):
         url = f'{self.DOMAIN}/api/v1/descriptions/{id}/'
         info = {
-            'category': category_id,
             'name': description
         }
 
-        response = requests.put(url, headers=self.get_headers(), json=info)
+        response = requests.patch(url, headers=self.get_headers(), json=info)
         return response.json()
     
 
@@ -125,13 +124,7 @@ class ApiRequests:
         url = f'{self.DOMAIN}/api/v1/descriptions/{id}/'
         response = requests.delete(url, headers=self.get_headers())
 
-        if response.status_code == 204:
-            return {"detail": "Descrição deletada com sucesso."}
-        elif response.status_code == 500:
-            return {
-                "detail": "Exclusão não é permitida. Verifique se existem transações atreladas a esta descrição."
-            }
-        return {"error": "Nenhuma descrição encontrada."}
+        return response
     
 
     def insert_transaction(self, category, description, amount, date=None, obs=None):
