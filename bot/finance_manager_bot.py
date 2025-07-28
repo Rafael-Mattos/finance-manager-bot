@@ -535,12 +535,15 @@ def callback_handler(call):
     elif call.data.startswith('edit_transaction'):
         # to do
         print('Edit transaction')
+        bot.send_message(call.message.chat.id, 'Edit transaction - Em desenvolvimento, feature estará disponivel em breve')
     elif call.data.startswith('delete_transaction'):
         # to do
         print('Delete transaction')
+        bot.send_message(call.message.chat.id, 'Delete transaction - Em desenvolvimento, feature estará disponivel em breve')
     elif call.data.startswith('delete_recurring'):
         # to do
         print('Delete recurring transaction')
+        bot.send_message(call.message.chat.id, 'elete recurring transaction - Em desenvolvimento, feature estará disponivel em breve')
 
     bot.answer_callback_query(call.id)
 
